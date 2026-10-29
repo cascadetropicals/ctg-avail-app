@@ -98,7 +98,7 @@ export function init(h) {
 
 export function setUser(me) {
   els.avatar.textContent = initial(me.name || me.email);
-  els.menuUser.innerHTML = `<strong>${esc(me.name || '')}</strong><span>${esc(me.email || '')}</span>`;
+  els.menuUser.innerHTML = `<strong>${esc(me.name || '')}</strong><span>Your name on changes</span>`;
 }
 
 export function setDemoTag(on) { $('#demoTag').hidden = !on; }

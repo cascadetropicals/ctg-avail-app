@@ -3,6 +3,7 @@
 import * as api from './api.js';
 import * as st from './store.js';
 import * as ui from './ui.js';
+import { store } from './format.js';
 
 const CFG = window.CG_CONFIG || {};
 const $ = (s) => document.querySelector(s);
@@ -17,6 +18,10 @@ function registerWorker() {
 }
 
 // ----- Sign-in screen --------------------------------------------------------
+// People enter their name (saved as "Last edited by") and, if the sheet owner set
+// one, an access code.
+
+const NAME_KEY = 'cg.name.v1';
 
 function loginMessage(text) {
   const el = $('#loginMsg');
@@ -24,65 +29,53 @@ function loginMessage(text) {
   el.hidden = !text;
 }
 
-function showLogin(message) {
+async function showLogin(message) {
   stopPolling();
   started = false;
   $('#app').hidden = true;
   $('#login').hidden = false;
   loginMessage(message);
-  if (api.isDemo()) renderDemoLogin();
-  else renderGoogleButton();
-}
 
-function renderDemoLogin() {
-  const box = $('#gsiButton');
-  box.innerHTML = '<button class="btn btn-primary btn-lg" type="button" id="demoGo">Open with demo data</button>';
-  $('#demoGo').addEventListener('click', async () => {
-    startApp(await api.login('demo'));
-  });
-  $('.login-foot').textContent = 'Demo mode: made-up plants, nothing is sent anywhere. Set API_URL in config.js to use real data.';
-}
+  const name = $('#loginName');
+  name.value = store.get(NAME_KEY) || '';
+  $('#loginCode').value = '';
+  $('#loginCodeWrap').hidden = true;
+  $('#loginFoot').textContent = api.isDemo()
+    ? 'Demo mode: made-up plants, nothing is sent anywhere. Set API_URL in config.js to use real data.'
+    : 'Your name is saved with each change you make.';
+  setTimeout(() => (name.value ? $('#loginCode') : name).focus({ preventScroll: true }), 50);
 
-function loadGoogleScript() {
-  return new Promise((resolve, reject) => {
-    if (window.google && window.google.accounts && window.google.accounts.id) { resolve(); return; }
-    const s = document.createElement('script');
-    s.src = 'https://accounts.google.com/gsi/client';
-    s.async = true;
-    s.onload = resolve;
-    s.onerror = () => reject(new Error('Could not load Google sign-in. Check the connection and reload.'));
-    document.head.appendChild(s);
-  });
-}
-
-async function renderGoogleButton() {
   try {
-    if (!CFG.GOOGLE_CLIENT_ID) throw new Error('GOOGLE_CLIENT_ID is missing in config.js.');
-    await loadGoogleScript();
-    window.google.accounts.id.initialize({
-      client_id: CFG.GOOGLE_CLIENT_ID,
-      callback: onCredential,
-      auto_select: false,
-      cancel_on_tap_outside: true
-    });
-    const box = $('#gsiButton');
-    box.innerHTML = '';
-    window.google.accounts.id.renderButton(box, { theme: 'outline', size: 'large', shape: 'pill', text: 'signin_with', width: 300 });
+    const { codeRequired } = await api.info();
+    $('#loginCodeWrap').hidden = !codeRequired;
+    if (codeRequired && name.value) $('#loginCode').focus({ preventScroll: true });
   } catch (e) {
-    loginMessage(e.message);
+    // Without a connection we can't tell; the code field appears if the server asks for it.
   }
 }
 
-async function onCredential(resp) {
+async function onLoginSubmit(ev) {
+  ev.preventDefault();
+  const name = $('#loginName').value.trim();
+  const code = $('#loginCode').value;
+  if (name.length < 2) { loginMessage('Please enter your name (at least 2 letters).'); $('#loginName').focus(); return; }
   loginMessage('');
-  $('#gsiButton').setAttribute('aria-busy', 'true');
+  const btn = $('#loginGo');
+  btn.disabled = true;
+  btn.textContent = 'One moment…';
   try {
-    const session = await api.login(resp.credential);
+    const session = await api.login(name, code);
+    store.set(NAME_KEY, session.name);
     startApp(session);
   } catch (e) {
-    loginMessage(e.message || 'Sign-in failed. Try again.');
+    if (e.code === 'AUTH' && /code/i.test(e.message)) {
+      $('#loginCodeWrap').hidden = false;
+      $('#loginCode').select();
+    }
+    loginMessage(e.message || 'Could not continue. Try again.');
   } finally {
-    $('#gsiButton').removeAttribute('aria-busy');
+    btn.disabled = false;
+    btn.textContent = 'Continue';
   }
 }
 
@@ -153,15 +146,14 @@ async function signOut() {
   const n = st.S.queue.length;
   if (n) {
     const ok = await confirmDialog({
-      title: 'Sign out and lose changes?',
-      body: `${n} ${n === 1 ? 'change has' : 'changes have'} not reached the sheet yet. Signing out now will discard ${n === 1 ? 'it' : 'them'}.`,
-      ok: 'Sign out'
+      title: 'Switch user and lose changes?',
+      body: `${n} ${n === 1 ? 'change has' : 'changes have'} not reached the sheet yet. Switching user now will discard ${n === 1 ? 'it' : 'them'}.`,
+      ok: 'Switch user'
     });
     if (!ok) return;
   }
   api.clearSession();
   st.clearLocal(true);
-  if (window.google && window.google.accounts && window.google.accounts.id) window.google.accounts.id.disableAutoSelect();
   location.reload();
 }
 
@@ -175,6 +167,7 @@ function onAuthLost(e) {
 
 function boot() {
   registerWorker();
+  $('#loginForm').addEventListener('submit', onLoginSubmit);
   ui.init({ refresh: refreshNow, signOut, setAdvance: st.setAdvance });
   st.on('auth', onAuthLost);
   window.addEventListener('online', () => st.setOnline(true));

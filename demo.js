@@ -41,7 +41,7 @@ const PLANTS = [
   ['Anthurium', ['Clarinervium', 'Crystallinum', 'Red King', 'Warocqueanum']]
 ];
 const SIZES = ['4in', '4in', '4in', '4in', '2in', '2in', '2in', '6in', '6in', '8in', '10in'];
-const USERS = ['maria@example.com', 'sam@example.com', 'priya@example.com'];
+const USERS = ['Maria', 'Sam', 'Priya'];
 const NOTES = ['', '', '', 'H4', 'H3 117', 'Bench 12', 'Front row', 'H2 shade', 'Check tags', 'H5'];
 const CROPS = ['', '', '', '', '', '', '', '', '', 'sell assorted only', 'jewel orchid', 'from Nursery B 80/177', 'label assorted'];
 
@@ -134,9 +134,15 @@ export async function handle(body) {
 async function run(body) {
   const d = load();
   switch (body.a) {
-    case 'login':
+    case 'info':
+      return { ok: true, codeRequired: false };
+    case 'login': {
       await wait(300);
-      return { ok: true, session: { token: 'demo', exp: Math.floor(Date.now() / 1000) + 86400 * 30 }, user: { email: 'demo@example.com', name: 'Demo' } };
+      const name = String(body.name || '').replace(/\s+/g, ' ').trim().slice(0, 40);
+      if (name.length < 2) { const e = new Error('Please enter your name (at least 2 letters).'); e.code = 'BAD_REQUEST'; throw e; }
+      d.me = name; persist();
+      return { ok: true, session: { token: 'demo', exp: Math.floor(Date.now() / 1000) + 86400 * 30 }, user: { email: name, name } };
+    }
     case 'ping':
       return { ok: true };
     case 'load':
@@ -168,7 +174,7 @@ async function run(body) {
         if (changedKeys.length) {
           for (const k of changedKeys) it.v[k] = fields[k];
           if (changedKeys.some((k) => STAMP.includes(k))) { it.v.edited = new Date().toISOString(); fields.edited = it.v.edited; }
-          it.v.by = 'demo@example.com'; fields.by = it.v.by;
+          it.v.by = d.me || 'Demo'; fields.by = it.v.by;
           d.seq += 1;
           d.log.push({ seq: d.seq, row: it.row, name: it.v.name, f: fields, by: it.v.by, ts: Date.now() });
           if (d.log.length > 250) d.log.shift();

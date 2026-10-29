@@ -71,9 +71,14 @@ export async function call(action, extra = {}) {
   return data;
 }
 
-export async function login(idToken) {
-  const data = await post({ a: 'login', idToken });
-  const session = { token: data.session.token, exp: data.session.exp, email: data.user.email, name: data.user.name };
+export async function info() {
+  return post({ a: 'info' }, 15000);
+}
+
+export async function login(name, code) {
+  const data = await post({ a: 'login', name, code });
+  // "email" holds the name: it is what the sheet shows in "Last edited by".
+  const session = { token: data.session.token, exp: data.session.exp, email: data.user.name, name: data.user.name };
   setSession(session);
   return session;
 }

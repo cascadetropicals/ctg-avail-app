@@ -44,10 +44,18 @@
   <div class="login-card">
     <svg class="mark mark-lg" viewBox="0 0 48 48" aria-hidden="true"><use href="#mark"/></svg>
     <h1>Avail CG</h1>
-    <p class="login-sub">Sign in with your Google account to see and update availability.</p>
-    <div id="gsiButton" class="gsi"></div>
+    <p class="login-sub" id="loginSub">Enter your name to see and update availability.</p>
+    <form id="loginForm" class="login-form" autocomplete="off" novalidate>
+      <label class="field"><span class="field-label">Your name</span>
+        <input id="loginName" type="text" autocomplete="given-name" autocapitalize="words" maxlength="40" placeholder="First name" enterkeyhint="next">
+      </label>
+      <label class="field" id="loginCodeWrap" hidden><span class="field-label">Access code</span>
+        <input id="loginCode" type="password" autocomplete="off" autocapitalize="off" maxlength="60" placeholder="Ask your manager" enterkeyhint="go">
+      </label>
+      <button class="btn btn-primary btn-lg" type="submit" id="loginGo">Continue</button>
+    </form>
     <p id="loginMsg" class="login-msg" role="alert" hidden></p>
-    <p class="login-foot">Only people on the access list can sign in.</p>
+    <p class="login-foot" id="loginFoot">Your name is saved with each change you make.</p>
   </div>
 </main>
 
@@ -74,7 +82,7 @@
       <span>Go to next item after checking</span>
       <input id="optAdvance" type="checkbox" checked>
     </label>
-    <button class="menu-item" role="menuitem" data-act="signout"><svg class="ic"><use href="#i-out"/></svg>Sign out</button>
+    <button class="menu-item" role="menuitem" data-act="signout"><svg class="ic"><use href="#i-out"/></svg>Switch user</button>
   </div>
 
   <div id="banner" class="banner" role="alert" hidden></div>
