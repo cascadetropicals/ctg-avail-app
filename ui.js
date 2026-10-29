@@ -47,12 +47,10 @@ export function init(h) {
   // List
   els.list.addEventListener('click', (e) => {
     if (e.target.closest('[data-act="retry"]')) { hooks.refresh(); return; }
-    const checkBtn = e.target.closest('[data-act="check"]');
     const li = e.target.closest('li[data-row]');
     if (!li) return;
     const it = S.byRow.get(Number(li.dataset.row));
     if (!it) return;
-    if (checkBtn) { setChecked(it, val(it, 'checked') !== true); return; }
     if (e.target.closest('[data-act="open"]')) select(it.row);
   });
 
@@ -179,9 +177,6 @@ function rowHTML(it) {
         </span>
         ${assorted ? `<span class="row-note">${esc(crop)}</span>` : ''}
       </span>
-    </button>
-    <button class="row-check" type="button" data-act="check" aria-pressed="${checked}" aria-label="${checked ? 'Checked. Tap to undo' : 'Mark as checked'}">
-      <span class="check-dot">${ic('i-check')}</span>
     </button>
   </li>`;
 }

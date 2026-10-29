@@ -266,7 +266,7 @@ input:focus-visible, textarea:focus-visible { outline: none; }
 @keyframes flash { from { background: var(--blue-tint); } to { background: transparent; } }
 .row-main {
   flex: 1; min-width: 0; min-height: 54px; display: flex; align-items: center; gap: 11px; text-align: left;
-  padding: 6px 2px 6px 12px; border: 0; background: none; cursor: pointer;
+  padding: 6px 12px 6px 12px; border: 0; background: none; cursor: pointer;
 }
 .row-main:active { background: color-mix(in srgb, var(--spruce) 8%, transparent); }
 
@@ -307,14 +307,6 @@ input:focus-visible, textarea:focus-visible { outline: none; }
 .row.is-checked .chip-on { background: transparent; color: var(--ink-3); }
 .row.is-checked .stat, .row.is-checked .stat b { color: var(--ink-3); }
 
-.row-check { width: 58px; flex: none; display: grid; place-items: center; border: 0; background: none; cursor: pointer; }
-.check-dot {
-  width: 30px; height: 30px; border-radius: 50%; border: 2.2px solid var(--ink-3); display: grid; place-items: center; color: transparent;
-  transition: background .15s, border-color .15s, transform .15s;
-}
-.check-dot .ic { width: 18px; height: 18px; stroke-width: 2.8; }
-.row-check:active .check-dot { transform: scale(.88); }
-.row.is-checked .check-dot { background: var(--spruce); border-color: var(--spruce); color: var(--on-spruce); }
 
 .row.skeleton { min-height: 54px; align-items: center; gap: 11px; padding: 0 12px; content-visibility: visible; }
 .row.skeleton .pot { background: var(--line-2); }
