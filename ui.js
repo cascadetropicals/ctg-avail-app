@@ -52,7 +52,7 @@ export function init(h) {
     if (!li) return;
     const it = S.byRow.get(Number(li.dataset.row));
     if (!it) return;
-    if (checkBtn) { setChecked(it, val(it, 'checked') !== true, { fromList: true }); return; }
+    if (checkBtn) { setChecked(it, val(it, 'checked') !== true); return; }
     if (e.target.closest('[data-act="open"]')) select(it.row);
   });
 
@@ -80,8 +80,6 @@ export function init(h) {
     if (b.dataset.act === 'refresh') hooks.refresh();
     if (b.dataset.act === 'signout') hooks.signOut();
   });
-  $('#optAdvance').checked = S.advance;
-  $('#optAdvance').addEventListener('change', (e) => hooks.setAdvance(e.target.checked));
 
   els.pill.addEventListener('click', () => hooks.refresh());
 
@@ -330,6 +328,10 @@ function detailHTML() {
       </div>
     </div>
 
+    <section class="grp grp-top">
+      <div class="tiles tiles-1">${tile('checked', 'Item checked')}</div>
+    </section>
+
     <section class="grp">
       <label class="field field-note"><span class="field-label">Picking notes</span>
         <textarea data-ctl="text" data-key="picking" rows="2" placeholder="Add a picking note"></textarea>
@@ -379,11 +381,7 @@ function detailHTML() {
     </details>
     <div class="d-spacer"></div>
   </div>
-  <div class="d-foot">
-    <button class="btn-check" type="button" data-act="check" aria-pressed="false">
-      ${ic('i-check')}<span class="bc-label">Mark as checked</span>
-    </button>
-  </div>`;
+  `;
 }
 
 export function renderDetail() {
@@ -467,11 +465,6 @@ export function syncDetail() {
     else el.textContent = v === null || v === undefined || v === '' ? '—' : String(v);
   });
 
-  const checked = val(it, 'checked') === true;
-  const b = $('.btn-check', els.detail);
-  b.classList.toggle('is-done', checked);
-  b.setAttribute('aria-pressed', String(checked));
-  $('.bc-label', b).textContent = checked ? 'Checked. Tap to undo' : 'Mark as checked';
   syncPosition();
 }
 
@@ -493,7 +486,6 @@ function onDetailClick(e) {
     if (a === 'back') { closeDetail(true); return; }
     if (a === 'prev') { go(-1); return; }
     if (a === 'next') { go(1); return; }
-    if (a === 'check') { setChecked(it, val(it, 'checked') !== true, { fromList: false }); return; }
   }
   const bool = e.target.closest('[data-ctl="bool"]');
   if (bool) { edit(it, bool.dataset.key, val(it, bool.dataset.key) !== true); return; }
@@ -606,31 +598,8 @@ function go(dir) {
 
 // ----- Checking items --------------------------------------------------------
 
-function setChecked(it, value, { fromList }) {
-  const orderBefore = order.slice();
-  const idx = orderBefore.indexOf(it);
-  const wasSelected = S.sel === it.row;
+function setChecked(it, value) {
   edit(it, 'checked', value);
-  const label = displayName(it.v.name, it.v.size);
-
-  let advancedTo = null;
-  if (value && !fromList && wasSelected && S.advance) {
-    for (let i = idx + 1; i < orderBefore.length; i++) {
-      if (val(orderBefore[i], 'checked') !== true) { advancedTo = orderBefore[i]; break; }
-    }
-    if (advancedTo) select(advancedTo.row);
-  }
-
-  toast(value ? `Checked ${label}` : `Unchecked ${label}`, {
-    action: {
-      label: 'Undo',
-      fn: () => {
-        edit(it, 'checked', !value);
-        if (advancedTo && S.byRow.get(it.row)) select(it.row);
-      }
-    }
-  });
-  if (value && !fromList && wasSelected && !advancedTo && S.advance) toast('No more unchecked items in this list.', { ms: 3500 });
 }
 
 // ----- Toasts, banner, status ------------------------------------------------

@@ -122,11 +122,10 @@ function stopPolling() {
 async function refreshNow() {
   try {
     await st.refresh(true);
-    ui.toast('Data refreshed', { ms: 2000 });
   } catch (e) {
     if (e.code === 'AUTH' || e.code === 'FORBIDDEN') showLogin(e.message);
     else if (!st.S.hasData) ui.showLoadError(e.message);
-    else ui.toast(e.code === 'NETWORK' ? 'No connection. Showing saved data.' : e.message, { ms: 4000 });
+    // Offline or failed refresh: the sync pill already shows the state, no popup.
   }
 }
 
@@ -168,7 +167,7 @@ function onAuthLost(e) {
 function boot() {
   registerWorker();
   $('#loginForm').addEventListener('submit', onLoginSubmit);
-  ui.init({ refresh: refreshNow, signOut, setAdvance: st.setAdvance });
+  ui.init({ refresh: refreshNow, signOut });
   st.on('auth', onAuthLost);
   window.addEventListener('online', () => st.setOnline(true));
   window.addEventListener('offline', () => st.setOnline(false));
