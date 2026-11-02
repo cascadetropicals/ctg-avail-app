@@ -43,7 +43,14 @@ export function init(h) {
   });
 
   // Search (also used by barcode scanners, which type the code and press Enter)
-  const applySearch = () => { setQuery(els.q.value.trim()); limit = PAGE; renderList(); els.listScroll.scrollTop = 0; };
+  const applySearch = () => {
+    setQuery(els.q.value.trim()); limit = PAGE; renderList();
+    // Nothing in this tab, but the item exists in another one (typical for a scanned barcode): show it in All items.
+    if (!order.length && S.q && S.view !== 'all' && list('all', S.q).length) {
+      setView('all'); renderTabs(); renderList();
+    }
+    els.listScroll.scrollTop = 0;
+  };
   const runSearch = debounce(applySearch, 120);
   els.q.addEventListener('input', () => { els.qClear.hidden = !els.q.value; runSearch(); });
   els.q.addEventListener('keydown', (e) => {
