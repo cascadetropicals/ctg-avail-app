@@ -12,7 +12,7 @@ import { store as ls, uid, startOfToday, debounce } from './format.js';
 const CFG = window.CG_CONFIG || {};
 const KEY_DATA = 'cg.data.v1';
 const KEY_QUEUE = 'cg.queue.v1';
-const STAMP_KEYS = ['avail', 'future', 'ctgQty', 'twoWks'];
+const STAMP_KEYS = ['avail', 'future', 'ctgQty', 'twoWks', 'picking', 'crop', 'watch', 'checked'];
 
 /** Edits to these fields can change which view an item is in, or its sort position. */
 export const ORDER_KEYS = new Set(['checked', 'avail', 'future', 'ctgQty', 'twoWks', 'edited']);
@@ -154,12 +154,17 @@ function applyRows(fields, rows) {
   S.hasData = true;
 }
 
-const persistData = debounce(() => {
+function persistNow() {
   ls.set(KEY_DATA, {
     ts: S.loadedAt, seq: S.seq, fields: S.fields,
     rows: S.items.map((it) => [it.row, ...S.fields.map((k) => it.v[k])])
   });
-}, 900);
+}
+const persistData = debounce(persistNow, 900);
+// Never lose the latest saved state if the page is closed or reloaded right after a save.
+if (typeof window !== 'undefined') {
+  window.addEventListener('pagehide', () => { if (S.hasData) persistNow(); });
+}
 
 function persistQueue() {
   ls.set(KEY_QUEUE, S.queue.map((o) => ({ id: o.id, row: o.row, name: o.name, set: o.set, ts: o.ts, tries: o.tries })));
@@ -316,7 +321,7 @@ export async function flush() {
     ready.forEach((o) => { o.sending = false; });
     recomputePending();
     persistQueue();
-    persistData();
+    persistNow();
     emit('data', { patches: touched, urgent: true });
     if (S.failures.length) emit('failure');
   } catch (e) {

@@ -9,7 +9,7 @@ const FIELDS = ['code', 'onHand', 'prevOrder', 'suggested', 'recv7', 'wks', 'sol
 
 const EDITABLE = new Set(['avail', 'future', 'ctgQty', 'picking', 'twoWks', 'crop', 'walk', 'watch', 'ast', 'zam', 'lastZam',
   'back', 'checked', 'count']);
-const STAMP = ['avail', 'future', 'ctgQty', 'twoWks'];
+const STAMP = ['avail', 'future', 'ctgQty', 'twoWks', 'picking', 'crop', 'watch', 'checked'];
 const KEY = 'cg.demo.v1';
 
 function rng(seed) {
