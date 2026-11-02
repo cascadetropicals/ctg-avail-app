@@ -15,7 +15,10 @@ const wide = window.matchMedia('(min-width: 760px)');
 
 const els = {};
 let order = [];            // items currently shown in the list, in order
-let hooks = {};            // callbacks supplied by main.js (refresh, sign out, ...)
+let hooks = {};
+const PAGE = 60;           // rows drawn at first; more are added as you scroll
+let limit = PAGE;
+let moreObs = null;            // callbacks supplied by main.js (refresh, sign out, ...)
 
 // ----- Setup -----------------------------------------------------------------
 
@@ -33,16 +36,30 @@ export function init(h) {
     const b = e.target.closest('[data-view]');
     if (!b) return;
     setView(b.dataset.view);
+    limit = PAGE;
     renderTabs();
     renderList();
     els.listScroll.scrollTop = 0;
   });
 
-  // Search
-  const runSearch = debounce(() => { setQuery(els.q.value); renderList(); els.listScroll.scrollTop = 0; }, 120);
+  // Search (also used by barcode scanners, which type the code and press Enter)
+  const applySearch = () => { setQuery(els.q.value.trim()); limit = PAGE; renderList(); els.listScroll.scrollTop = 0; };
+  const runSearch = debounce(applySearch, 120);
   els.q.addEventListener('input', () => { els.qClear.hidden = !els.q.value; runSearch(); });
-  els.q.addEventListener('keydown', (e) => { if (e.key === 'Enter') els.q.blur(); });
-  els.qClear.addEventListener('click', () => { els.q.value = ''; els.qClear.hidden = true; setQuery(''); renderList(); els.q.focus(); });
+  els.q.addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter') return;
+    runSearch.cancel();
+    applySearch();
+    if (order.length === 1) {
+      select(order[0].row);
+      if (wide.matches) els.q.select(); else els.q.blur();   // desktop: stay ready for the next scan
+    } else if (!wide.matches) els.q.blur();
+  });
+  els.qClear.addEventListener('click', () => { els.q.value = ''; els.qClear.hidden = true; setQuery(''); limit = PAGE; renderList(); els.q.focus(); });
+  $('#qScan').addEventListener('click', () => openScanner((code) => {
+    els.q.value = code; els.qClear.hidden = false;
+    els.q.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }));
+  }));
 
   // List
   els.list.addEventListener('click', (e) => {
@@ -51,6 +68,7 @@ export function init(h) {
     if (!li) return;
     const it = S.byRow.get(Number(li.dataset.row));
     if (!it) return;
+    if (e.target.closest('[data-act="unavail"]')) { edit(it, 'avail', false); return; }
     if (e.target.closest('[data-act="open"]')) select(it.row);
   });
 
@@ -80,6 +98,8 @@ export function init(h) {
   });
 
   els.pill.addEventListener('click', () => hooks.refresh());
+  els.syncBtn = $('#syncBtn');
+  els.syncBtn.addEventListener('click', () => hooks.refresh());
 
   // Phone back button closes the item page
   window.addEventListener('popstate', () => { if (!wide.matches && els.shell.dataset.pane === 'detail') closeDetail(false); });
@@ -129,6 +149,14 @@ export function renderTabs() {
   els.viewNote.hidden = !view.note;
 }
 
+/** Same as AppSheet: the Item Name column as it is (it already ends with the size). */
+function fullName(it) {
+  const n = String(it.v.name || '');
+  const s = String(it.v.size || '').trim();
+  if (s && !n.toLowerCase().includes(s.toLowerCase())) return n + ' - ' + s;
+  return n;
+}
+
 function potHTML(size, big) {
   const p = sizeParts(size);
   if (p.n !== undefined) {
@@ -151,7 +179,7 @@ function rowHTML(it) {
   const two = val(it, 'twoWks');
   const crop = String(val(it, 'crop') || '');
   const assorted = /only/i.test(crop) && /assorted/i.test(crop);
-  const name = displayName(it.v.name, it.v.size);
+  const name = fullName(it);
 
   const tags = [];
   if (val(it, 'walk') === true) tags.push('<span class="tag tag-red">Avail walk</span>');
@@ -165,7 +193,6 @@ function rowHTML(it) {
 
   return `<li class="row${checked ? ' is-checked' : ''}${sel}${pend}${flash}" data-row="${it.row}">
     <button class="row-main" type="button" data-act="open" aria-label="${esc(name)}, open details">
-      ${potHTML(it.v.size, false)}
       <span class="row-text">
         <span class="row-name">${esc(name)}</span>
         <span class="row-meta">
@@ -178,6 +205,7 @@ function rowHTML(it) {
         ${assorted ? `<span class="row-note">${esc(crop)}</span>` : ''}
       </span>
     </button>
+    ${avail && S.view === 'zero' ? `<button class="row-x" type="button" data-act="unavail" aria-label="Mark ${esc(name)} not available">${ic('i-x')}</button>` : ''}
   </li>`;
 }
 
@@ -203,7 +231,8 @@ export function renderList() {
   const done = order.length - todo;
   const items = [];
   let section = null;
-  for (const it of order) {
+  const shown = order.length > limit ? order.slice(0, limit) : order;
+  for (const it of shown) {
     const c = val(it, 'checked') === true;
     if (c !== section) {
       section = c;
@@ -211,7 +240,28 @@ export function renderList() {
     }
     items.push({ k: 'r' + it.row, html: rowHTML(it) });
   }
+  if (shown.length < order.length) items.push({ k: 'more', html: '<li class="more" aria-hidden="true"><span></span></li>' });
   reconcile(items);
+  watchMore();
+}
+
+function watchMore() {
+  if (moreObs) moreObs.disconnect();
+  const m = els.list.querySelector('li.more');
+  if (!m || !('IntersectionObserver' in window)) return;
+  moreObs = new IntersectionObserver((ents) => {
+    if (!ents.some((e) => e.isIntersecting)) return;
+    limit += PAGE * 2;
+    renderList();
+  }, { root: els.listScroll, rootMargin: '600px 0px' });
+  moreObs.observe(m);
+}
+
+/** Make sure a row is drawn (it may be further down than the rows shown so far). */
+function ensureShown(row) {
+  const it = S.byRow.get(row);
+  const i = it ? order.indexOf(it) : -1;
+  if (i >= limit) { limit = i + PAGE; renderList(); }
 }
 
 // Keeps unchanged rows in place and only rebuilds the ones whose markup changed,
@@ -316,7 +366,6 @@ function detailHTML() {
   </div>
   <div class="d-scroll" id="dScroll">
     <div class="d-title">
-      <span id="dPot"></span>
       <div class="d-title-text">
         <h2 id="dName" tabindex="-1"></h2>
         <p class="d-sub" id="dSub"></p>
@@ -421,8 +470,7 @@ export function syncDetail() {
   if (!it || !els.detail.querySelector('[data-ctl]')) return;
   const active = document.activeElement;
 
-  $('#dPot').innerHTML = potHTML(it.v.size, true);
-  $('#dName').textContent = displayName(it.v.name, it.v.size);
+  $('#dName').textContent = fullName(it);
   const by = val(it, 'by');
   const edited = val(it, 'edited');
   const sub = [`Code ${it.v.code || '—'}`];
@@ -559,6 +607,7 @@ export function select(row) {
     const old = els.list.querySelector(`li[data-row="${prev}"]`);
     if (old) old.classList.remove('is-sel');
   }
+  ensureShown(row);
   const li = els.list.querySelector(`li[data-row="${row}"]`);
   if (li) { li.classList.add('is-sel'); li.scrollIntoView({ block: 'nearest' }); }
   renderDetail();
@@ -651,6 +700,7 @@ export function renderStatus(s = status()) {
     error: `${fmtNum(s.failed || 0)} not saved`
   };
   els.pill.dataset.state = s.state;
+  if (els.syncBtn) els.syncBtn.classList.toggle('is-spin', s.state === 'loading');
   els.pillLabel.textContent = map[s.state] || 'Saved';
   els.pill.title = s.state === 'idle' ? 'All changes saved. Tap to refresh.' : '';
 }
@@ -658,4 +708,90 @@ export function renderStatus(s = status()) {
 export function showLoadError(message) {
   els.list.innerHTML = `<li class="empty"><strong>Can't load items</strong><span>${esc(message)}</span>
     <button class="btn btn-primary" type="button" data-act="retry">Try again</button></li>`;
+}
+
+
+// ----- Barcode camera ----------------------------------------------------------
+
+let scanStop = null;
+
+function loadZXing() {
+  if (window.ZXing) return Promise.resolve(window.ZXing);
+  return new Promise((ok, fail) => {
+    const s = document.createElement('script');
+    s.src = new URL('zxing.min.js', import.meta.url).href;
+    s.onload = () => (window.ZXing ? ok(window.ZXing) : fail(new Error('scanner')));
+    s.onerror = () => fail(new Error('scanner'));
+    document.head.appendChild(s);
+  });
+}
+
+async function openScanner(onCode) {
+  const box = $('#scanner');
+  const video = $('#scanVideo');
+  const msg = $('#scanMsg');
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    msg.textContent = 'This browser cannot use the camera here. Type the code instead.';
+    box.hidden = false;
+    $('#scanClose').onclick = () => { box.hidden = true; };
+    return;
+  }
+  msg.textContent = 'Starting camera…';
+  box.hidden = false;
+  let stream = null;
+  let done = false;
+  const close = () => {
+    done = true;
+    box.hidden = true;
+    if (stream) stream.getTracks().forEach((t) => t.stop());
+    video.srcObject = null;
+    scanStop = null;
+  };
+  scanStop = close;
+  $('#scanClose').onclick = close;
+  const found = (text) => { if (done || !text) return; close(); onCode(String(text).trim()); };
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 } }, audio: false });
+    if (done) { stream.getTracks().forEach((t) => t.stop()); return; }
+    video.srcObject = stream;
+    await video.play();
+    msg.textContent = 'Point the camera at a barcode';
+    if ('BarcodeDetector' in window) {
+      const det = new window.BarcodeDetector();
+      const tick = async () => {
+        if (done) return;
+        try { const r = await det.detect(video); if (r.length) { found(r[0].rawValue); return; } } catch (e) { /* try again */ }
+        setTimeout(tick, 150);
+      };
+      tick();
+    } else {
+      const Z = await loadZXing();
+      const hints = new Map([[Z.DecodeHintType.TRY_HARDER, true]]);
+      const reader = new Z.MultiFormatReader();
+      reader.setHints(hints);
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d', { willReadFrequently: true });
+      const tick = () => {
+        if (done) return;
+        if (video.videoWidth) {
+          canvas.width = video.videoWidth; canvas.height = video.videoHeight;
+          ctx.drawImage(video, 0, 0);
+          try {
+            const img = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            const gray = new Uint8ClampedArray(canvas.width * canvas.height);
+            for (let i = 0, j = 0; i < img.data.length; i += 4, j++) gray[j] = (img.data[i] * 299 + img.data[i + 1] * 587 + img.data[i + 2] * 114) / 1000;
+            const src = new Z.RGBLuminanceSource(gray, canvas.width, canvas.height);
+            const res = reader.decode(new Z.BinaryBitmap(new Z.HybridBinarizer(src)));
+            if (res) { found(res.getText()); return; }
+          } catch (e) { /* nothing readable in this frame */ }
+        }
+        setTimeout(tick, 200);
+      };
+      tick();
+    }
+  } catch (e) {
+    msg.textContent = e && e.name === 'NotAllowedError'
+      ? 'Camera access was blocked. Allow the camera for this site and try again.'
+      : 'The camera could not be started. Type the code instead.';
+  }
 }

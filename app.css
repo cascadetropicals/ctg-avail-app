@@ -205,7 +205,8 @@ input:focus-visible, textarea:focus-visible { outline: none; }
 .banner-actions { display: flex; gap: 8px; }
 
 /* ----- Layout: phone first, split view from 760px ----- */
-.shell { flex: 1; min-height: 0; display: grid; grid-template-columns: 1fr; position: relative; }
+.shell { flex: 1; min-height: 0; display: grid; grid-template-columns: 1fr; grid-template-rows: minmax(0, 1fr); position: relative; }
+.listpane, .detailpane { min-height: 0; }
 .listpane { display: flex; flex-direction: column; min-height: 0; background: var(--surface); }
 .listhead { flex: none; padding: 12px 16px 8px; }
 .listscroll {
@@ -240,11 +241,13 @@ input:focus-visible, textarea:focus-visible { outline: none; }
 .search > .ic { position: absolute; left: 14px; color: var(--ink-3); pointer-events: none; }
 .search input {
   flex: 1; min-width: 0; height: 100%; border: 0; background: none; color: var(--ink); outline: none;
-  font: 500 16px var(--font); padding: 0 48px 0 46px; -webkit-appearance: none; appearance: none;
+  font: 500 16px var(--font); padding: 0 96px 0 46px; -webkit-appearance: none; appearance: none;
 }
 .search input::-webkit-search-cancel-button { display: none; }
 .search input::placeholder { color: var(--ink-3); }
-.search-clear { position: absolute; right: 2px; width: 46px; height: 46px; border: 0; background: none; color: var(--ink-3); cursor: pointer; display: grid; place-items: center; }
+.search-scan { position: absolute; right: 2px; width: 46px; height: 46px; border: 0; background: none; color: var(--spruce); cursor: pointer; display: grid; place-items: center; }
+.search-scan .ic { width: 24px; height: 24px; }
+.search-clear { position: absolute; right: 46px; width: 46px; height: 46px; border: 0; background: none; color: var(--ink-3); cursor: pointer; display: grid; place-items: center; }
 .viewnote { margin-top: 10px; font-size: 14px; color: var(--ink-2); padding: 0 2px; }
 
 /* ----- List ----- */
@@ -284,7 +287,7 @@ input:focus-visible, textarea:focus-visible { outline: none; }
 .row-text { flex: 1; min-width: 0; display: grid; gap: 2px; }
 .row-name {
   font: 650 16px/1.2 var(--font); color: var(--ink); letter-spacing: -.005em;
-  display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere;
 }
 .row-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 8px; font-size: 13px; }
 .chip {
@@ -488,3 +491,22 @@ input:focus-visible, textarea:focus-visible { outline: none; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .001ms !important; animation-iteration-count: 1 !important; transition-duration: .001ms !important; }
 }
+
+/* red X: mark not available straight from the list */
+.row-x { flex: none; width: 52px; border: 0; background: none; color: var(--red); cursor: pointer; display: grid; place-items: center; }
+.row-x .ic { width: 22px; height: 22px; stroke-width: 2.8; padding: 7px; box-sizing: content-box; border-radius: 50%; background: var(--red-tint); }
+.row-x:active .ic { transform: scale(.88); }
+.row.more { height: 40px; border: 0; }
+
+.sync-btn.is-spin .ic { animation: spin .9s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.scanner { position: fixed; inset: 0; z-index: 80; background: #000; display: grid; place-items: center; }
+.scanner[hidden] { display: none; }
+.scanner video { width: 100%; height: 100%; object-fit: cover; }
+.scan-frame { position: absolute; width: min(78vw, 420px); height: min(40vw, 220px); min-height: 140px; border: 3px solid #fff; border-radius: 18px; box-shadow: 0 0 0 100vmax rgba(0, 0, 0, .45); }
+.scan-msg { position: absolute; top: calc(var(--safe-t) + 24px); left: 16px; right: 16px; text-align: center; color: #fff; font-weight: 650; text-shadow: 0 1px 4px rgba(0, 0, 0, .6); }
+.scan-close { position: absolute; bottom: calc(var(--safe-b) + 28px); min-width: 160px; }
+
+.brand-name { white-space: nowrap; }
+@media (max-width: 420px) { .demo-tag { display: none; } }
