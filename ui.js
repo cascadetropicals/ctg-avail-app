@@ -726,6 +726,12 @@ function loadZXing() {
   });
 }
 
+/** Scanners read a UPC-A as 13 digits with a leading 0; the sheet stores the 12 digits. */
+function cleanCode(text) {
+  const t = String(text || '').trim();
+  return /^0\d{12}$/.test(t) ? t.slice(1) : t;
+}
+
 async function openScanner(onCode) {
   const box = $('#scanner');
   const video = $('#scanVideo');
@@ -751,41 +757,63 @@ async function openScanner(onCode) {
   $('#scanClose').onclick = close;
   const found = (text) => { if (done || !text) return; close(); onCode(String(text).trim()); };
   try {
-    stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 } }, audio: false });
+    stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' }, width: { ideal: 1920 }, height: { ideal: 1080 }, advanced: [{ focusMode: 'continuous' }] }, audio: false });
     if (done) { stream.getTracks().forEach((t) => t.stop()); return; }
     video.srcObject = stream;
     await video.play();
     msg.textContent = 'Point the camera at a barcode';
+    let hintTimer = setTimeout(() => { if (!done) msg.textContent = 'Hold the barcode flat, 15–25 cm away, filling the frame. Avoid glare.'; }, 7000);
+    const origClose = scanStop;
+    scanStop = () => { clearTimeout(hintTimer); origClose(); };
+    $('#scanClose').onclick = scanStop;
     if ('BarcodeDetector' in window) {
       const det = new window.BarcodeDetector();
       const tick = async () => {
         if (done) return;
-        try { const r = await det.detect(video); if (r.length) { found(r[0].rawValue); return; } } catch (e) { /* try again */ }
-        setTimeout(tick, 150);
+        try { const r = await det.detect(video); if (r.length) { clearTimeout(hintTimer); found(cleanCode(r[0].rawValue)); return; } } catch (e) { /* try again */ }
+        setTimeout(tick, 120);
       };
       tick();
     } else {
       const Z = await loadZXing();
-      const hints = new Map([[Z.DecodeHintType.TRY_HARDER, true]]);
+      const F = Z.BarcodeFormat;
+      const hints = new Map([
+        [Z.DecodeHintType.TRY_HARDER, true],
+        [Z.DecodeHintType.POSSIBLE_FORMATS, [F.UPC_A, F.EAN_13, F.EAN_8, F.UPC_E, F.CODE_128, F.CODE_39, F.ITF, F.QR_CODE]]
+      ]);
       const reader = new Z.MultiFormatReader();
       reader.setHints(hints);
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d', { willReadFrequently: true });
+      // Try the middle of the picture first (where people aim), then the whole picture, at two sizes.
+      const tries = [
+        { sx: 0.1, sy: 0.2, sw: 0.8, sh: 0.6, max: 1100 },
+        { sx: 0, sy: 0, sw: 1, sh: 1, max: 900 },
+        { sx: 0.3, sy: 0.33, sw: 0.4, sh: 0.34, max: 1000, up: true },
+        { sx: 0.1, sy: 0.2, sw: 0.8, sh: 0.6, max: 640 },
+        { sx: 0.2, sy: 0.28, sw: 0.6, sh: 0.44, max: 1100, up: true },
+        { sx: 0, sy: 0, sw: 1, sh: 1, max: 1500 }
+      ];
+      const decodeOnce = (t) => {
+        const vw = video.videoWidth, vh = video.videoHeight;
+        const sw = vw * t.sw, sh = vh * t.sh;
+        const k = t.up ? t.max / sw : Math.min(1, t.max / sw);
+        canvas.width = Math.round(sw * k); canvas.height = Math.round(sh * k);
+        ctx.drawImage(video, vw * t.sx, vh * t.sy, sw, sh, 0, 0, canvas.width, canvas.height);
+        const img = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const gray = new Uint8ClampedArray(canvas.width * canvas.height);
+        for (let i = 0, j = 0; i < img.data.length; i += 4, j++) gray[j] = (img.data[i] * 299 + img.data[i + 1] * 587 + img.data[i + 2] * 114) / 1000;
+        const src = new Z.RGBLuminanceSource(gray, canvas.width, canvas.height);
+        return reader.decode(new Z.BinaryBitmap(new Z.HybridBinarizer(src))).getText();
+      };
+      let n = 0;
       const tick = () => {
         if (done) return;
         if (video.videoWidth) {
-          canvas.width = video.videoWidth; canvas.height = video.videoHeight;
-          ctx.drawImage(video, 0, 0);
-          try {
-            const img = ctx.getImageData(0, 0, canvas.width, canvas.height);
-            const gray = new Uint8ClampedArray(canvas.width * canvas.height);
-            for (let i = 0, j = 0; i < img.data.length; i += 4, j++) gray[j] = (img.data[i] * 299 + img.data[i + 1] * 587 + img.data[i + 2] * 114) / 1000;
-            const src = new Z.RGBLuminanceSource(gray, canvas.width, canvas.height);
-            const res = reader.decode(new Z.BinaryBitmap(new Z.HybridBinarizer(src)));
-            if (res) { found(res.getText()); return; }
-          } catch (e) { /* nothing readable in this frame */ }
+          const t = tries[n++ % tries.length];
+          try { const text = decodeOnce(t); if (text) { clearTimeout(hintTimer); found(cleanCode(text)); return; } } catch (e) { /* nothing readable in this try */ }
         }
-        setTimeout(tick, 200);
+        setTimeout(tick, 60);
       };
       tick();
     }
