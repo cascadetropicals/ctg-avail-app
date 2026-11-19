@@ -18,10 +18,11 @@ function registerWorker() {
 }
 
 // ----- Sign-in screen --------------------------------------------------------
-// People enter their name (saved as "Last edited by") and, if the sheet owner set
-// one, an access code.
+// Step 1: Google account. Step 2: "Who is working?" (tablets are shared); that
+// name is saved as "Last edited by".
 
 const NAME_KEY = 'cg.name.v1';
+let googleCredential = null;   // Google ID token, kept in memory between the two steps
 
 function loginMessage(text) {
   const el = $('#loginMsg');
@@ -29,49 +30,71 @@ function loginMessage(text) {
   el.hidden = !text;
 }
 
+function loadGoogle() {
+  if (window.google && window.google.accounts) return Promise.resolve();
+  return new Promise((ok, no) => {
+    const s = document.createElement('script');
+    s.src = 'https://accounts.google.com/gsi/client';
+    s.async = true; s.onload = ok; s.onerror = no;
+    document.head.append(s);
+  });
+}
+
+function showNameStep() {
+  $('#gbtn').hidden = true;
+  $('#loginForm').hidden = false;
+  $('#loginSub').textContent = 'Who is working? Your name is saved with each change.';
+  const name = $('#loginName');
+  name.value = store.get(NAME_KEY) || '';
+  setTimeout(() => name.focus({ preventScroll: true }), 50);
+}
+
 async function showLogin(message) {
   stopPolling();
   started = false;
+  googleCredential = null;
   $('#app').hidden = true;
   $('#login').hidden = false;
+  $('#loginForm').hidden = true;
+  $('#gbtn').hidden = false;
+  $('#loginSub').textContent = 'Sign in with Google to see and update availability.';
   loginMessage(message);
-
-  const name = $('#loginName');
-  name.value = store.get(NAME_KEY) || '';
-  $('#loginCode').value = '';
-  $('#loginCodeWrap').hidden = true;
   $('#loginFoot').textContent = api.isDemo()
     ? 'Demo mode: made-up plants, nothing is sent anywhere. Set API_URL in config.js to use real data.'
-    : 'Your name is saved with each change you make.';
-  setTimeout(() => (name.value ? $('#loginCode') : name).focus({ preventScroll: true }), 50);
+    : 'Use the Google account your manager gave you.';
+
+  if (api.isDemo()) { showNameStep(); return; }   // no Google in demo mode
 
   try {
-    const { codeRequired } = await api.info();
-    $('#loginCodeWrap').hidden = !codeRequired;
-    if (codeRequired && name.value) $('#loginCode').focus({ preventScroll: true });
+    const { googleClientId } = await api.info();
+    if (!googleClientId) { loginMessage('Sign-in is not set up yet. Ask your manager.'); return; }
+    await loadGoogle();
+    window.google.accounts.id.initialize({
+      client_id: googleClientId, auto_select: false, cancel_on_tap_outside: false,
+      callback: (r) => { googleCredential = r.credential; loginMessage(''); showNameStep(); }
+    });
+    const dark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+    window.google.accounts.id.renderButton($('#gbtn'),
+      { theme: dark ? 'filled_black' : 'outline', size: 'large', text: 'continue_with', shape: 'rectangular', logo_alignment: 'left', width: 320 });
   } catch (e) {
-    // Without a connection we can't tell; the code field appears if the server asks for it.
+    loginMessage('Could not reach Google or the server. Check the connection and reload.');
   }
 }
 
 async function onLoginSubmit(ev) {
   ev.preventDefault();
   const name = $('#loginName').value.trim();
-  const code = $('#loginCode').value;
   if (name.length < 2) { loginMessage('Please enter your name (at least 2 letters).'); $('#loginName').focus(); return; }
   loginMessage('');
   const btn = $('#loginGo');
   btn.disabled = true;
   btn.textContent = 'One moment…';
   try {
-    const session = await api.login(name, code);
+    const session = await api.login(googleCredential, name);
     store.set(NAME_KEY, session.name);
     startApp(session);
   } catch (e) {
-    if (e.code === 'AUTH' && /code/i.test(e.message)) {
-      $('#loginCodeWrap').hidden = false;
-      $('#loginCode').select();
-    }
+    if (e.code === 'AUTH' || e.code === 'FORBIDDEN') { showLogin(e.message); return; }
     loginMessage(e.message || 'Could not continue. Try again.');
   } finally {
     btn.disabled = false;
@@ -167,6 +190,7 @@ function onAuthLost(e) {
 function boot() {
   registerWorker();
   $('#loginForm').addEventListener('submit', onLoginSubmit);
+  $('#loginBack').addEventListener('click', () => showLogin());
   ui.init({ refresh: refreshNow, signOut });
   st.on('auth', onAuthLost);
   window.addEventListener('online', () => st.setOnline(true));

@@ -45,15 +45,14 @@
   <div class="login-card">
     <svg class="mark mark-lg" viewBox="0 0 48 48" aria-hidden="true"><use href="#mark"/></svg>
     <h1>Avail CG</h1>
-    <p class="login-sub" id="loginSub">Enter your name to see and update availability.</p>
-    <form id="loginForm" class="login-form" autocomplete="off" novalidate>
-      <label class="field"><span class="field-label">Your name</span>
-        <input id="loginName" type="text" autocomplete="given-name" autocapitalize="words" maxlength="40" placeholder="First name" enterkeyhint="next">
-      </label>
-      <label class="field" id="loginCodeWrap" hidden><span class="field-label">Access code</span>
-        <input id="loginCode" type="password" autocomplete="off" autocapitalize="off" maxlength="60" placeholder="Ask your manager" enterkeyhint="go">
+    <p class="login-sub" id="loginSub">Sign in with Google to see and update availability.</p>
+    <div id="gbtn" class="gbtn"></div>
+    <form id="loginForm" class="login-form" autocomplete="off" novalidate hidden>
+      <label class="field"><span class="field-label">Who is working?</span>
+        <input id="loginName" type="text" autocomplete="given-name" autocapitalize="words" maxlength="40" placeholder="Your first name" enterkeyhint="go">
       </label>
       <button class="btn btn-primary btn-lg" type="submit" id="loginGo">Continue</button>
+      <button class="btn btn-lg" type="button" id="loginBack">Use another Google account</button>
     </form>
     <p id="loginMsg" class="login-msg" role="alert" hidden></p>
     <p class="login-foot" id="loginFoot">Your name is saved with each change you make.</p>

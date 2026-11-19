@@ -75,8 +75,8 @@ export async function info() {
   return post({ a: 'info' }, 15000);
 }
 
-export async function login(name, code) {
-  const data = await post({ a: 'login', name, code });
+export async function login(credential, name) {
+  const data = await post({ a: 'login', credential, name });
   // "email" holds the name: it is what the sheet shows in "Last edited by".
   const session = { token: data.session.token, exp: data.session.exp, email: data.user.name, name: data.user.name };
   setSession(session);

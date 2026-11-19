@@ -147,6 +147,8 @@ input:focus-visible, textarea:focus-visible { outline: none; }
 .login-sub { color: var(--ink-2); max-width: 300px; }
 .login-form { width: 100%; display: grid; gap: 14px; margin-top: 10px; text-align: left; }
 .login-form .btn { width: 100%; }
+.gbtn { display: flex; justify-content: center; color-scheme: light; min-height: 44px; margin-top: 10px; }
+.gbtn iframe { color-scheme: light; background: transparent; border-radius: 12px; }
 .login-msg { color: var(--red); font-weight: 600; max-width: 320px; }
 .login-foot { color: var(--ink-3); font-size: 13.5px; max-width: 320px; margin-top: 10px; }
 

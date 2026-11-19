@@ -135,7 +135,7 @@ async function run(body) {
   const d = load();
   switch (body.a) {
     case 'info':
-      return { ok: true, codeRequired: false };
+      return { ok: true, googleClientId: '' };
     case 'login': {
       await wait(300);
       const name = String(body.name || '').replace(/\s+/g, ' ').trim().slice(0, 40);
