@@ -61,7 +61,7 @@ async function showLogin(message) {
   loginMessage(message);
   $('#loginFoot').textContent = api.isDemo()
     ? 'Demo mode: made-up plants, nothing is sent anywhere. Set API_URL in config.js to use real data.'
-    : 'Use the Google account your manager gave you.';
+    : '';
 
   if (api.isDemo()) { showNameStep(); return; }   // no Google in demo mode
 
