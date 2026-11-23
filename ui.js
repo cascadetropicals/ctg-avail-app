@@ -225,7 +225,7 @@ const EMPTY = {
 export function renderList() {
   order = list();
   if (!S.hasData) {
-    els.list.innerHTML = Array.from({ length: 9 }, () => '<li class="row skeleton" aria-hidden="true"><span class="pot"></span><span class="row-text"><span class="sk sk-1"></span><span class="sk sk-2"></span></span></li>').join('');
+    els.list.innerHTML = '<li class="skel" role="status" aria-live="polite"></li>';
     return;
   }
   if (!order.length) {
