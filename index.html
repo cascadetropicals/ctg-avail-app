@@ -94,7 +94,10 @@
           <button id="qScan" class="search-scan" type="button" aria-label="Scan a barcode with the camera"><svg class="ic"><use href="#i-scan"/></svg></button>
           <button id="qClear" class="search-clear" type="button" aria-label="Clear search" hidden><svg class="ic"><use href="#i-x"/></svg></button>
         </div>
-        <p id="viewNote" class="viewnote"></p>
+        <div class="noterow">
+          <p id="viewNote" class="viewnote"></p>
+          <button id="infoBtn" class="info-btn" type="button" aria-label="How the screens are filtered" aria-haspopup="dialog">i</button>
+        </div>
       </div>
       <div id="listScroll" class="listscroll">
         <ul id="list" class="list"></ul>
@@ -113,6 +116,24 @@
     <button id="scanClose" class="btn btn-primary scan-close" type="button">Cancel</button>
   </div>
 </div>
+
+<dialog id="infoDlg" class="dialog dialog-info" aria-labelledby="infoTitle">
+  <form method="dialog">
+    <h2 id="infoTitle">What each screen shows</h2>
+    <dl class="info-list">
+      <dt>All items</dt>
+      <dd>Every item marked in the sheet column "CG PROD. ITEMS". Items you have not checked yet come first, then by size.</dd>
+      <dt>Not edited in 2 days</dt>
+      <dd>Items that are in use and have had no edit since the start of yesterday. In use means at least one of: Available is on, Future avail is on, CTG avail qty is above 0, or 2wks+ avail is above 0. These are the ones to look at again.</dd>
+      <dt>Available, qty 0</dt>
+      <dd>Items with Available turned on but a CTG avail qty of 0. Usually sold out and not unchecked. The red X turns Available off.</dd>
+    </dl>
+    <p class="info-foot">An item leaves "Not edited" when someone changes Available, Future avail, CTG avail qty, 2wks+ avail, Picking notes, Crop notes, Watch or Item checked.</p>
+    <div class="dialog-actions">
+      <button value="close" class="btn btn-primary">Got it</button>
+    </div>
+  </form>
+</dialog>
 
 <dialog id="confirm" class="dialog">
   <form method="dialog">
