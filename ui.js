@@ -32,6 +32,15 @@ export function init(h) {
   });
 
   // Tabs
+  els.detail.addEventListener('click', (e) => {
+    const b = e.target.closest('.alert-line[data-view]');
+    if (!b) return;
+    setView(b.dataset.view);
+    limit = PAGE;
+    renderTabs();
+    renderList();
+    els.listScroll.scrollTop = 0;
+  });
   els.tabs.addEventListener('click', (e) => {
     const b = e.target.closest('[data-view]');
     if (!b) return;
@@ -148,12 +157,13 @@ export function renderTabs() {
   els.tabs.innerHTML = VIEWS.map((v) => `
     <button class="tab" role="tab" type="button" data-view="${v.id}" aria-selected="${v.id === S.view}" aria-label="${esc(v.label)}, ${fmtNum(c[v.id])} items">
       ${ic(v.icon, 'ic tab-icon')}
-      <span class="tab-count">${fmtNum(c[v.id])}</span>
+      <span class="tab-count${v.id === 'zero' && c.zero ? ' is-alert' : ''}">${fmtNum(c[v.id])}</span>
       <span class="tab-label"><span class="l-full">${esc(v.label)}</span><span class="l-short">${esc(v.short)}</span></span>
     </button>`).join('');
   const view = VIEWS.find((v) => v.id === S.view);
   els.viewNote.textContent = view.note;
   els.viewNote.hidden = !view.note;
+  els.viewNote.classList.toggle('is-alert', view.id === 'zero' && c.zero > 0);
 }
 
 /** Same as AppSheet: the Item Name column as it is (it already ends with the size). */
@@ -446,6 +456,7 @@ export function renderDetail() {
         <svg class="mark mark-md" viewBox="0 0 48 48" aria-hidden="true"><use href="#mark"/></svg>
         <h2>Select an item</h2>
         <p>Tap an item in the list to update its availability.</p>
+        ${c.zero ? `<button class="alert-line" type="button" data-view="zero"><strong>${fmtNum(c.zero)}</strong> marked available with qty 0</button>` : ''}
         <div class="progress" role="img" aria-label="${fmtNum(c.checked)} of ${fmtNum(c.all)} items checked">
           <div class="progress-bar"><span style="width:${pct}%"></span></div>
           <p><strong>${fmtNum(c.checked)}</strong> of ${fmtNum(c.all)} items checked</p>
