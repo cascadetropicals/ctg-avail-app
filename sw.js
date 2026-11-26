@@ -1,7 +1,7 @@
 // Service worker: lets the app open instantly and work without a connection.
 // It only caches this site's own files. Calls to Google are never cached.
 
-const VERSION = 'cg-avail-v12';
+const VERSION = 'cg-avail-v14';
 const SHELL = [
   './',
   'index.html',
@@ -11,6 +11,7 @@ const SHELL = [
   'ui.js',
   'store.js',
   'api.js',
+  'feedback.js',
   'demo.js',
   'format.js',
   'figtree-latin-wght-normal.woff2',

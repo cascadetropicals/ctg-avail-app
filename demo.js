@@ -143,6 +143,11 @@ async function run(body) {
       d.me = name; persist();
       return { ok: true, session: { token: 'demo', exp: Math.floor(Date.now() / 1000) + 86400 * 30 }, user: { email: name, name } };
     }
+    case 'feedback':
+      await wait(400);
+      if (window.__fbFail) { const e = new Error('Could not send.'); e.code = 'NETWORK'; throw e; }
+      (window.__fbSent = window.__fbSent || []).push(body);
+      return { ok: true };
     case 'ping':
       return { ok: true };
     case 'load':

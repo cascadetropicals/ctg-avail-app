@@ -3,6 +3,7 @@
 import * as api from './api.js';
 import * as st from './store.js';
 import * as ui from './ui.js';
+import * as fb from './feedback.js';
 import { store } from './format.js';
 
 const CFG = window.CG_CONFIG || {};
@@ -125,6 +126,7 @@ async function startApp(session) {
   }
   st.flush();
   startPolling();
+  fb.init();
 }
 
 function startPolling() {
@@ -191,7 +193,7 @@ function boot() {
   registerWorker();
   $('#loginForm').addEventListener('submit', onLoginSubmit);
   $('#loginBack').addEventListener('click', () => showLogin());
-  ui.init({ refresh: refreshNow, signOut });
+  ui.init({ refresh: refreshNow, signOut, feedback: fb.openManually });
   st.on('auth', onAuthLost);
   window.addEventListener('online', () => st.setOnline(true));
   window.addEventListener('offline', () => st.setOnline(false));

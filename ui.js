@@ -32,8 +32,6 @@ export function init(h) {
   });
 
   // Tabs
-  const infoBtn = $('#infoBtn'), infoDlg = $('#infoDlg');
-  if (infoBtn && infoDlg) infoBtn.addEventListener('click', () => { if (infoDlg.showModal) infoDlg.showModal(); });
   els.detail.addEventListener('click', (e) => {
     const b = e.target.closest('.alert-line[data-view]');
     if (!b) return;
@@ -113,6 +111,8 @@ export function init(h) {
     toggleMenu(false);
     if (b.dataset.act === 'refresh') hooks.refresh();
     if (b.dataset.act === 'signout') hooks.signOut();
+    if (b.dataset.act === 'feedback') hooks.feedback && hooks.feedback();
+    if (b.dataset.act === 'info') { const d = $('#infoDlg'); if (d && d.showModal) d.showModal(); }
   });
 
   els.pill.addEventListener('click', () => hooks.refresh());

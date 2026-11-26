@@ -259,10 +259,7 @@ input:focus-visible, textarea:focus-visible { outline: none; }
 .search-scan { position: absolute; right: 2px; width: 46px; height: 46px; border: 0; background: none; color: var(--spruce); cursor: pointer; display: grid; place-items: center; }
 .search-scan .ic { width: 24px; height: 24px; }
 .search-clear { position: absolute; right: 46px; width: 46px; height: 46px; border: 0; background: none; color: var(--ink-3); cursor: pointer; display: grid; place-items: center; }
-.noterow { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 10px; }
-.viewnote { flex: 1; min-width: 0; font-size: 14px; color: var(--ink-2); padding: 0 2px; }
-.info-btn { flex: none; width: 28px; height: 28px; margin-left: auto; border-radius: 50%; border: 1.5px solid var(--ink-3); background: transparent; color: var(--ink-2); font: 700 15px/1 Georgia, serif; font-style: italic; cursor: pointer; }
-.info-btn:active { background: var(--line-2); }
+.viewnote { margin-top: 10px; font-size: 14px; color: var(--ink-2); padding: 0 2px; }
 .dialog-info { width: min(480px, calc(100vw - 32px)); max-height: calc(100vh - 48px); overflow: auto; }
 .info-list { margin-top: 14px; display: grid; gap: 4px; }
 .info-list dt { font-weight: 700; margin-top: 10px; color: var(--ink); }
@@ -539,3 +536,45 @@ input:focus-visible, textarea:focus-visible { outline: none; }
 
 .brand-name { white-space: nowrap; }
 @media (max-width: 420px) { .demo-tag { display: none; } }
+
+/* ----- Feedback card ----- */
+.fb {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 70; max-height: 92vh; overflow: auto;
+  padding: 18px 18px calc(18px + var(--safe-b)); border-radius: 20px 20px 0 0; background: var(--surface); color: var(--ink);
+  box-shadow: var(--shadow), 0 0 0 1px var(--line); transform: translateY(24px); opacity: 0;
+  transition: transform .22s cubic-bezier(.2, .8, .2, 1), opacity .22s;
+}
+.fb.in { transform: none; opacity: 1; }
+.fb-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.fb h2 { font: 700 20px/1.15 var(--display); outline: none; }
+.fb-x { width: 44px; height: 44px; margin: -8px -8px -8px 0; display: grid; place-content: center; border: 0; border-radius: 12px; background: none; color: var(--ink-2); cursor: pointer; }
+.fb-x:active { background: var(--paper); }
+.fb-step { margin-top: 4px; font-size: 13px; color: var(--ink-2); }
+.fb-q { margin-top: 14px; font-size: 17px; font-weight: 700; line-height: 1.3; }
+.fb-scale { margin-top: 14px; display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
+.fb-opt {
+  min-height: 68px; padding: 8px 2px; display: grid; align-content: center; justify-items: center; gap: 4px;
+  border: 1px solid var(--line); border-radius: 12px; background: var(--surface); color: var(--ink); font: inherit; cursor: pointer;
+}
+.fb-opt b { font: 800 20px/1 var(--display); }
+.fb-opt span { font-size: 11px; line-height: 1.15; color: var(--ink-2); text-align: center; }
+.fb-opt[aria-checked="true"] { background: var(--spruce); border-color: var(--spruce); color: var(--on-spruce); }
+.fb-opt[aria-checked="true"] span { color: var(--on-spruce); }
+.fb-note { margin-top: 12px; }
+.fb-link { height: 40px; padding: 0 4px; border: 0; background: none; color: var(--spruce); font: inherit; font-weight: 700; font-size: 14px; cursor: pointer; }
+.fb-text {
+  display: block; width: 100%; margin-top: 6px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 12px;
+  background: var(--paper); color: var(--ink); font: inherit; font-size: 16px; line-height: 1.35; resize: vertical;
+}
+.fb-open { margin-top: 12px; }
+.fb-count { margin-top: 4px; font-size: 12px; text-align: right; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.fb-err { margin-top: 10px; color: var(--red); font-weight: 700; font-size: 14px; }
+.fb-actions { margin-top: 16px; display: flex; gap: 10px; }
+.fb-actions .btn-primary { margin-left: auto; min-width: 104px; }
+.fb-actions .btn[disabled] { opacity: .5; }
+.fb-thanks { padding: 14px 0; font: 700 18px/1.3 var(--display); }
+.fb button:focus-visible, .fb textarea:focus-visible { outline: 2px solid var(--spruce); outline-offset: 2px; }
+@media (min-width: 760px) {
+  .fb { left: auto; right: 20px; bottom: 20px; width: 380px; border-radius: 20px; padding-bottom: 18px; }
+}
+@media (prefers-reduced-motion: reduce) { .fb { transition: none; transform: none; } }
